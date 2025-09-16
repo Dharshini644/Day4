@@ -2,26 +2,32 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = "ap-southeast-2"
-        AWS_ACCOUNT_ID = "873727239305"
-        ECR_REPO = "tourism-app"
-        EKS_CLUSTER_NAME = "tourism-cluster"
-        IMAGE_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER}"
+        AWS_REGION        = "ap-southeast-2"
+        AWS_ACCOUNT_ID    = "873727239305"
+        ECR_REPO          = "tourism-app"
+        EKS_CLUSTER_NAME  = "tourism-cluster"
+        IMAGE_URI         = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER}"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/<your-username>/day4.git'
+                git branch: 'main',
+                    url: 'https://github.com/Dharshini644/day4.git'
             }
         }
 
         stage('Login to ECR') {
             steps {
-                sh '''
-                aws ecr get-login-password --region $AWS_REGION \
-                  | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-                '''
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh '''
+                    aws ecr get-login-password --region $AWS_REGION \
+                      | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+                    '''
+                }
             }
         }
 
@@ -37,7 +43,12 @@ pipeline {
 
         stage('Update kubeconfig') {
             steps {
-                sh 'aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    sh 'aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION'
+                }
             }
         }
 
