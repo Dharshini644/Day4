@@ -8,7 +8,7 @@ env:
   AWS_REGION: ap-southeast-2   # hardcode region here (or use secret)
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
-  ECR_REPO: day4
+  ECR_REPO: tourism-app
 
 jobs:
   deploy:
