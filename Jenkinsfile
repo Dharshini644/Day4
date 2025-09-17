@@ -12,17 +12,13 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/Dharshini644/day4.git'
+                git branch: 'main', url: 'https://github.com/Dharshini644/day4.git'
             }
         }
 
         stage('Login to ECR') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
-                ]]) {
+                withAWS(credentials: 'aws-creds', region: "${AWS_REGION}") {
                     sh '''
                     aws ecr get-login-password --region $AWS_REGION \
                       | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
@@ -43,10 +39,7 @@ pipeline {
 
         stage('Update kubeconfig') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
-                ]]) {
+                withAWS(credentials: 'aws-creds', region: "${AWS_REGION}") {
                     sh 'aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION'
                 }
             }
@@ -54,12 +47,14 @@ pipeline {
 
         stage('Deploy to EKS') {
             steps {
-                sh '''
-                kubectl set image deployment/tourism-deployment \
-                  tourism-container=$IMAGE_URI --record || \
-                  kubectl apply -f deployment.yaml
-                kubectl apply -f service.yaml
-                '''
+                withAWS(credentials: 'aws-creds', region: "${AWS_REGION}") {
+                    sh '''
+                    kubectl set image deployment/tourism-deployment \
+                      tourism-container=$IMAGE_URI || \
+                      kubectl apply -f deployment.yaml
+                    kubectl apply -f service.yaml
+                    '''
+                }
             }
         }
     }
